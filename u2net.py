@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.insert(0, 'U-2-Net')
 
@@ -21,15 +22,15 @@ from data_loader import ToTensorLab
 from model import U2NET  # full size version 173.6 MB
 # from model import U2NETP # small version u2net 4.7 MB
 
-model_dir = './U-2-Net/saved_models/u2net/u2net.pth'
+model_dir = os.path.join(os.getcwd(), 'U-2-Net', 'saved_models', 'u2net', 'u2net.pth')
 
 print("Loading U-2-Net...")
 net = U2NET(3, 1)
-net.load_state_dict(torch.load(model_dir))
+net.load_state_dict(torch.load(model_dir, map_location='cpu'))
 if torch.cuda.is_available():
     net.cuda()
 net.eval()
-
+print("Done! U-2-Net is ready")
 
 def normPRED(d):
     ma = torch.max(d)
@@ -39,6 +40,7 @@ def normPRED(d):
 
 
 def preprocess(image):
+    print('Start preprocess')
     label_3 = np.zeros(image.shape)
     label = np.zeros(label_3.shape[0:2])
 
@@ -59,6 +61,7 @@ def preprocess(image):
         'image': image,
         'label': label
     })
+    print('Peprocess completed')
 
     return sample
 
@@ -70,23 +73,31 @@ def run(img):
     inputs_test = sample['image'].unsqueeze(0)
     inputs_test = inputs_test.type(torch.FloatTensor)
 
+    print('Cuda: ' + str(torch.cuda.is_available()))
+
     if torch.cuda.is_available():
         inputs_test = Variable(inputs_test.cuda())
     else:
         inputs_test = Variable(inputs_test)
 
+    print('Run U^@-Net')
     d1, d2, d3, d4, d5, d6, d7 = net(inputs_test)
 
     # Normalization.
+    print('Normalization')
     pred = d1[:, 0, :, :]
     predict = normPRED(pred)
 
     # Convert to PIL Image
+    print('Convert to PIL Image')
     predict = predict.squeeze()
     predict_np = predict.cpu().data.numpy()
     im = Image.fromarray(predict_np * 255).convert('RGB')
 
     # Cleanup.
+    print('Cleanup')
     del d1, d2, d3, d4, d5, d6, d7
+
+    print('Run completed')
 
     return im

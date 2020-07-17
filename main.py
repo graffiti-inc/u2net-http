@@ -20,6 +20,7 @@ CORS(app)
 # Simple probe.
 @app.route('/', methods=['GET'])
 def hello():
+    print('Hello U^2-Net! from print')
     return 'Hello U^2-Net!'
 
 
@@ -36,6 +37,7 @@ def run():
         return jsonify({'error': 'empty image'}), 400
 
     # Convert string data to PIL Image
+    print('Convert string data to PIL Image')
     img = Image.open(io.BytesIO(data))
 
     # Ensure i,qge size is under 1024
@@ -43,9 +45,11 @@ def run():
         img.thumbnail((1024, 1024))
 
     # Process Image
+    print('Process Image')
     res = u2net.run(np.array(img))
 
     # Save to buffer
+    print('Save to buffer')
     buff = io.BytesIO()
     res.save(buff, 'PNG')
     buff.seek(0)
