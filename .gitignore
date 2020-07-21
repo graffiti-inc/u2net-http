@@ -1,6 +1,18 @@
 .vscode
 .DS_Store
+
+### U^2-Net files copied from original repo ###
 *.pth
-venv
 U-2-Net
+
+### Python ###
+venv
 __pycache__
+
+### Debug media files ###
+*.mp4
+*.png
+
+### JupyterNotebooks ###
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*

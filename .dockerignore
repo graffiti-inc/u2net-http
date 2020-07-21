@@ -1,7 +1,17 @@
 Dockerfile
-venv
 *.md
+
+### Python ###
+venv
 *.pyc
 *.pyo
 *.pyd
 __pycache__
+
+### Debug media files ###
+*.mp4
+*.png
+
+### JupyterNotebooks ###
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
