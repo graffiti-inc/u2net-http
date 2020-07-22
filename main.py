@@ -48,6 +48,10 @@ def run():
     print('Process Image')
     res = u2net.run(np.array(img))
 
+    # Convert to PIL Image
+    print('Convert to PIL Image')
+    im = Image.fromarray(res * 255).convert('RGB')
+
     # Save to buffer
     print('Save to buffer')
     buff = io.BytesIO()

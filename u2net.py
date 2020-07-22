@@ -22,15 +22,22 @@ from data_loader import ToTensorLab
 from model import U2NET  # full size version 173.6 MB
 # from model import U2NETP # small version u2net 4.7 MB
 
-model_dir = os.path.join(os.getcwd(), 'U-2-Net', 'saved_models', 'u2net', 'u2net.pth')
+model_dir = os.path.join(os.getcwd(), 'U-2-Net',
+                         'saved_models', 'u2net', 'u2net.pth')
 
 print("Loading U-2-Net...")
 net = U2NET(3, 1)
 net.load_state_dict(torch.load(model_dir, map_location='cpu'))
+
 if torch.cuda.is_available():
+    print("Cuda is available")
     net.cuda()
+else:
+    print("Cuda is NOT available")
+
 net.eval()
-print("Done! U-2-Net is ready")
+print("U-2-Net is ready")
+
 
 def normPRED(d):
     ma = torch.max(d)
@@ -40,7 +47,7 @@ def normPRED(d):
 
 
 def preprocess(image):
-    print('Start preprocess')
+    #print('Start image preprocess')
     label_3 = np.zeros(image.shape)
     label = np.zeros(label_3.shape[0:2])
 
@@ -61,7 +68,7 @@ def preprocess(image):
         'image': image,
         'label': label
     })
-    print('Peprocess completed')
+    #print('Preprocess completed')
 
     return sample
 
@@ -73,31 +80,27 @@ def run(img):
     inputs_test = sample['image'].unsqueeze(0)
     inputs_test = inputs_test.type(torch.FloatTensor)
 
-    print('Cuda: ' + str(torch.cuda.is_available()))
-
     if torch.cuda.is_available():
         inputs_test = Variable(inputs_test.cuda())
     else:
         inputs_test = Variable(inputs_test)
 
-    print('Run U^@-Net')
+    #print('Run U^2-Net')
     d1, d2, d3, d4, d5, d6, d7 = net(inputs_test)
 
     # Normalization.
-    print('Normalization')
+    # print('Normalization')
     pred = d1[:, 0, :, :]
     predict = normPRED(pred)
 
-    # Convert to PIL Image
-    print('Convert to PIL Image')
+    # Formatting data
     predict = predict.squeeze()
     predict_np = predict.cpu().data.numpy()
-    im = Image.fromarray(predict_np * 255).convert('RGB')
 
     # Cleanup.
-    print('Cleanup')
     del d1, d2, d3, d4, d5, d6, d7
+    torch.cuda.empty_cache()
 
-    print('Run completed')
-
-    return im
+    # Return the mask as numpy array with values within
+    # the range [0.0, 1.0] with format float32
+    return predict_np
