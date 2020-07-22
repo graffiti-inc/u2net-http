@@ -1,7 +1,26 @@
+# u2net-http depedencies
 Flask==1.1.1
 flask-cors==3.0.8
 gunicorn==19.9.0
-numpy==1.15.2
-scikit-image==0.14.0
-Pillow==6.2.2
 torchvision==0.2.1
+
+# scikit-image > 0.14.0 needed
+# https://github.com/numpy/numpy/issues/12744
+scikit-image==0.14.2
+
+# movie processing depedencies
+certifi==2020.6.20
+chardet==3.0.4
+decorator==4.4.2
+decord==0.4.0
+idna==2.10
+imageio==2.9.0
+imageio-ffmpeg==0.4.2
+moviepy==1.0.3
+numpy==1.19.0
+opencv-python==4.2.0.34
+Pillow==7.2.0
+proglog==0.1.9
+requests==2.24.0
+tqdm==4.48.0
+urllib3==1.25.9
