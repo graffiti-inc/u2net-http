@@ -25,7 +25,7 @@ def hello():
 
 
 # Route http posts to this method
-@app.route('/', methods=['POST'])
+@app.route('/image', methods=['POST'])
 def run():
     start = time.time()
 
