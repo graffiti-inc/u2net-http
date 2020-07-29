@@ -124,8 +124,9 @@ def video_loop():
         finally:
             video_queue.task_done()
 
+threading.Thread(target=video_loop, daemon=True).start()
+
 if __name__ == '__main__':
     os.environ['FLASK_ENV'] = 'development'
     port = int(os.environ.get('PORT', 8080))
-    threading.Thread(target=video_loop, daemon=True).start()
     app.run(debug=True, host='0.0.0.0', port=port)
