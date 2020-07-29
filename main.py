@@ -86,6 +86,9 @@ def video_task(data):
     logging.info('video_task started')
     global http, video_queue
 
+    # temporary files only. TODO allow downloading, uploading, decoding, encoding, etc
+    # to be parallelised and only serialise the GPU task
+    # that will need randomised filenames and for the files to be deleted after processing
     original_filename = 'video3.mp4'
     no_sound_filename = 'no_sound.mp4'
     output_filename = 'output3.mp4'
@@ -116,6 +119,9 @@ def video_loop():
     global http, video_queue
     http = urllib3.PoolManager()
     # set up thread local variable
+    # https://github.com/dmlc/decord/blob/e5ab942cf30fb44e03d048dced415c76a2c6b220/python/decord/bridge/__init__.py#L19
+    # `_CURRENT_BRIDGE.type = 'native'` doesn't get run except for the main thread
+    # this has been fixed on master, but not yet released. TODO in the future we can upgrade decord to avoid this
     decord.bridge.reset_bridge()
     while True:
         i = video_queue.get()
