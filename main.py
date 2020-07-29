@@ -1,14 +1,20 @@
-import io
-import os
-import sys
+from PIL import Image
 from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
-from PIL import Image
-import numpy as np
-import time
+import decord.bridge
+import io
 import logging
+import numpy as np
+import os
+import queue
+import shutil
+import sys
+import threading
+import time
+import urllib3
 
 import u2net
+import video
 
 logging.basicConfig(level=logging.INFO)
 
@@ -64,8 +70,62 @@ def run():
     # Return data
     return send_file(buff, mimetype='image/png')
 
+http = None
+video_queue = queue.Queue(32)
+
+@app.route('/startSegment', methods=['POST'])
+def start_segment():
+    data = request.get_json()
+    logging.info('start_segment {}'.format(data))
+    if not data:
+        return jsonify({'error': 'invalid request'}), 400
+    video_queue.put(data)
+    return jsonify({}), 200
+
+def video_task(data):
+    logging.info('video_task started')
+    global http, video_queue
+
+    original_filename = 'video3.mp4'
+    no_sound_filename = 'no_sound.mp4'
+    output_filename = 'output3.mp4'
+
+    src_signed_url = data['srcSignedUrl'][0]
+    logging.info('video_task src_signed_url {}'.format(src_signed_url))
+    dst_signed_url = data['dstSignedUrl'][0]
+    logging.info('video_task dst_signed_url {}'.format(dst_signed_url))
+
+    with http.request('GET', src_signed_url, preload_content=False) as r, open(original_filename, 'wb') as f:
+        logging.info('video_task get status {}'.format(r.status))
+        shutil.copyfileobj(r, f)
+
+    logging.info('video_task process_frames')
+    video.process_frames(original_filename, no_sound_filename)
+    logging.info('video_task insert_audio')
+    video.insert_audio(original_filename, no_sound_filename, output_filename)
+
+    with open(output_filename, 'rb') as f:
+        logging.info('video_task put')
+        r = http.request('PUT', dst_signed_url, headers={'Content-Type': 'video/mp4'}, body=f)
+        logging.info('video_task put status {}'.format(r.status))
+        assert r.status == 200
+
+    logging.info('video_task finished')
+
+def video_loop():
+    global http, video_queue
+    http = urllib3.PoolManager()
+    # set up thread local variable
+    decord.bridge.reset_bridge()
+    while True:
+        i = video_queue.get()
+        try:
+            video_task(i)
+        finally:
+            video_queue.task_done()
 
 if __name__ == '__main__':
     os.environ['FLASK_ENV'] = 'development'
     port = int(os.environ.get('PORT', 8080))
+    threading.Thread(target=video_loop, daemon=True).start()
     app.run(debug=True, host='0.0.0.0', port=port)
