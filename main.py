@@ -91,19 +91,22 @@ def video_task(data):
     # that will need randomised filenames and for the files to be deleted after processing
     original_filename = 'video3.mp4'
     no_sound_filename = 'no_sound.mp4'
+    mask_filename = 'mask.mp4'
     output_filename = 'output3.mp4'
 
     src_signed_url = data['srcSignedUrl'][0]
     logging.info('video_task src_signed_url {}'.format(src_signed_url))
     dst_signed_url = data['dstSignedUrl'][0]
     logging.info('video_task dst_signed_url {}'.format(dst_signed_url))
+    dst_mask_signed_url = data['dstMaskSignedUrl'][0]
+    logging.info('video_task dst_mask_signed_url {}'.format(dst_mask_signed_url))
 
     with http.request('GET', src_signed_url, preload_content=False) as r, open(original_filename, 'wb') as f:
         logging.info('video_task get status {}'.format(r.status))
         shutil.copyfileobj(r, f)
 
     logging.info('video_task process_frames')
-    video.process_frames(original_filename, no_sound_filename)
+    video.process_frames(original_filename, no_sound_filename, mask_filename)
     logging.info('video_task insert_audio')
     video.insert_audio(original_filename, no_sound_filename, output_filename)
 
@@ -111,6 +114,12 @@ def video_task(data):
         logging.info('video_task put')
         r = http.request('PUT', dst_signed_url, headers={'Content-Type': 'video/mp4'}, body=f)
         logging.info('video_task put status {}'.format(r.status))
+        assert r.status == 200
+
+    with open(mask_filename, 'rb') as f:
+        logging.info('video_task put mask')
+        r = http.request('PUT', dst_mask_signed_url, headers={'Content-Type': 'video/mp4'}, body=f)
+        logging.info('video_task put mask status {}'.format(r.status))
         assert r.status == 200
 
     logging.info('video_task finished')

@@ -37,7 +37,7 @@ def create_keying_background(width, height, rgb_color=(0, 0, 0)):
 # processes frames an saves them into a mp4 video
 
 
-def process_frames(original_filename, output_filename):
+def process_frames(original_filename, output_filename, mask_filename):
     # change to gpu(0) for faster processing
     vr = VideoReader(original_filename, ctx=cpu(0))
 
@@ -47,6 +47,8 @@ def process_frames(original_filename, output_filename):
     fourcc = cv2.VideoWriter_fourcc(*'MPEG')
     video = cv2.VideoWriter(output_filename, fourcc,
                             vr.get_avg_fps(), (width, height))
+    video_mask = cv2.VideoWriter(mask_filename, fourcc,
+                            vr.get_avg_fps(), (320, 320))
 
     # solid color image
     keying_bg = create_keying_background(width, height, (0, 255, 0))
@@ -58,6 +60,11 @@ def process_frames(original_filename, output_filename):
 
         # run u2net
         mask_np = u2net.run(frame_np)
+
+        # write frame to mask video
+        mask_np_uint8 = (mask_np * 255).astype(np.uint8)
+        mask_np_bgr = np.stack([mask_np_uint8]*3, axis=-1) # https://stackoverflow.com/a/40119878
+        video_mask.write(mask_np_bgr)
 
         # resize u2net output (320x320) to original frame resolution
         mask_cv2 = cv2.resize(mask_np, (width, height))
@@ -85,6 +92,7 @@ def process_frames(original_filename, output_filename):
 
     cv2.destroyAllWindows()
     video.release()
+    video_mask.release()
 
 # creates a video with src_video as a video source and src_audio as an audio source
 
@@ -100,11 +108,12 @@ def insert_audio(src_audio, src_video, dst):
 if __name__ == '__main__':
     original_filename = 'video3.mp4'
     no_sound_filename = 'no_sound.mp4'
+    mask_filename = 'mask.mp4'
     output_filename = 'output3.mp4'
 
     print(
         '\u001b[33mProcessing frames and putting frames back together...\u001b[0m')
-    process_frames(original_filename, no_sound_filename)
+    process_frames(original_filename, no_sound_filename, mask_filename)
 
     print('\u001b[33mInserting audio...\u001b[0m')
     insert_audio(original_filename, no_sound_filename, output_filename)
