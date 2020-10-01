@@ -45,10 +45,10 @@ def process_frames(original_filename, output_filename, mask_filename):
     height, width, layers = vr[0].shape
     print(f'\u001b[33mInput frame {height}x{width}x{layers}\u001b[0m')
 
-    fourcc = cv2.VideoWriter_fourcc(*'AVC1')
-    video = cv2.VideoWriter(output_filename, fourcc,
+    fourcc = cv2.VideoWriter_fourcc(*'FFV1')
+    video = cv2.VideoWriter(output_filename + '.lossless.mkv', fourcc,
                             vr.get_avg_fps(), (width, height))
-    video_mask = cv2.VideoWriter(mask_filename, fourcc,
+    video_mask = cv2.VideoWriter(mask_filename + '.lossless.mkv', fourcc,
                             vr.get_avg_fps(), (320, 320))
 
     # solid color image
@@ -94,6 +94,22 @@ def process_frames(original_filename, output_filename, mask_filename):
     cv2.destroyAllWindows()
     video.release()
     video_mask.release()
+
+    # encode videos to h264
+    video_enc_proc = start_encode_video(output_filename + '.lossless.mkv', output_filename)
+    video_mask_enc_proc = start_encode_video(mask_filename + '.lossless.mkv', mask_filename)
+    assert video_enc_proc.wait() == 0, 'Video encoding failed'
+    assert video_mask_enc_proc.wait() == 0, 'Mask video encoding failed'
+
+def start_encode_video(src, dst):
+    return subprocess.Popen([
+        imageio_ffmpeg._utils.get_ffmpeg_exe(),
+        '-y', # overwrite output
+        '-i', src, # input
+        '-codec', 'h264', # encode using x264
+        '-crf', '20', # aims for consistent video quality of 20, using as much bitrate as needed
+        dst
+    ])
 
 # creates a video with src_video as a video source and src_audio as an audio source
 
