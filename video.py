@@ -1,6 +1,7 @@
 
 import io
 import os
+import subprocess
 import sys
 import random
 
@@ -15,8 +16,8 @@ from decord import cpu, gpu
 import cv2
 import numpy as np
 
-# moviepy for handling audio
-from moviepy.editor import *
+# imageio_ffmpeg for handling audio
+import imageio_ffmpeg
 
 # import u2net
 import u2net
@@ -44,7 +45,7 @@ def process_frames(original_filename, output_filename, mask_filename):
     height, width, layers = vr[0].shape
     print(f'\u001b[33mInput frame {height}x{width}x{layers}\u001b[0m')
 
-    fourcc = cv2.VideoWriter_fourcc(*'MPEG')
+    fourcc = cv2.VideoWriter_fourcc(*'AVC1')
     video = cv2.VideoWriter(output_filename, fourcc,
                             vr.get_avg_fps(), (width, height))
     video_mask = cv2.VideoWriter(mask_filename, fourcc,
@@ -98,11 +99,17 @@ def process_frames(original_filename, output_filename, mask_filename):
 
 
 def insert_audio(src_audio, src_video, dst):
-    src_video = VideoFileClip(src_video)
-    src_audio = VideoFileClip(src_audio)
-    audio = src_audio.audio
-    final_video = src_video.set_audio(audio)
-    final_video.write_videofile(dst)
+    subprocess.check_call([
+        imageio_ffmpeg._utils.get_ffmpeg_exe(),
+        '-y', # overwrite output
+        '-i', src_video, # video as input 0
+        '-i', src_audio, # video with audio as input 1
+        '-map', '0:v', # use video from input 0
+        '-map', '1:a', # use audio from input 1
+        '-codec', 'copy', # don't re-encode video
+        '-acodec', 'copy', # don't re-encode audio
+        dst
+    ])
 
 
 if __name__ == '__main__':
