@@ -1,6 +1,7 @@
 
 import io
 import os
+import subprocess
 import sys
 import random
 
@@ -15,8 +16,8 @@ from decord import cpu, gpu
 import cv2
 import numpy as np
 
-# moviepy for handling audio
-from moviepy.editor import *
+# imageio_ffmpeg for handling audio
+import imageio_ffmpeg
 
 # import u2net
 import u2net
@@ -37,16 +38,18 @@ def create_keying_background(width, height, rgb_color=(0, 0, 0)):
 # processes frames an saves them into a mp4 video
 
 
-def process_frames(original_filename, output_filename):
+def process_frames(original_filename, output_filename, mask_filename):
     # change to gpu(0) for faster processing
     vr = VideoReader(original_filename, ctx=cpu(0))
 
     height, width, layers = vr[0].shape
     print(f'\u001b[33mInput frame {height}x{width}x{layers}\u001b[0m')
 
-    fourcc = cv2.VideoWriter_fourcc(*'MPEG')
-    video = cv2.VideoWriter(output_filename, fourcc,
+    fourcc = cv2.VideoWriter_fourcc(*'FFV1')
+    video = cv2.VideoWriter(output_filename + '.lossless.mkv', fourcc,
                             vr.get_avg_fps(), (width, height))
+    video_mask = cv2.VideoWriter(mask_filename + '.lossless.mkv', fourcc,
+                            vr.get_avg_fps(), (320, 320))
 
     # solid color image
     keying_bg = create_keying_background(width, height, (0, 255, 0))
@@ -58,6 +61,11 @@ def process_frames(original_filename, output_filename):
 
         # run u2net
         mask_np = u2net.run(frame_np)
+
+        # write frame to mask video
+        mask_np_uint8 = (mask_np * 255).astype(np.uint8)
+        mask_np_bgr = np.stack([mask_np_uint8]*3, axis=-1) # https://stackoverflow.com/a/40119878
+        video_mask.write(mask_np_bgr)
 
         # resize u2net output (320x320) to original frame resolution
         mask_cv2 = cv2.resize(mask_np, (width, height))
@@ -85,26 +93,50 @@ def process_frames(original_filename, output_filename):
 
     cv2.destroyAllWindows()
     video.release()
+    video_mask.release()
+
+    # encode videos to h264
+    video_enc_proc = start_encode_video(output_filename + '.lossless.mkv', output_filename)
+    video_mask_enc_proc = start_encode_video(mask_filename + '.lossless.mkv', mask_filename)
+    assert video_enc_proc.wait() == 0, 'Video encoding failed'
+    assert video_mask_enc_proc.wait() == 0, 'Mask video encoding failed'
+
+def start_encode_video(src, dst):
+    return subprocess.Popen([
+        imageio_ffmpeg._utils.get_ffmpeg_exe(),
+        '-y', # overwrite output
+        '-i', src, # input
+        '-codec', 'h264', # encode using x264
+        '-crf', '20', # aims for consistent video quality of 20, using as much bitrate as needed
+        dst
+    ])
 
 # creates a video with src_video as a video source and src_audio as an audio source
 
 
 def insert_audio(src_audio, src_video, dst):
-    src_video = VideoFileClip(src_video)
-    src_audio = VideoFileClip(src_audio)
-    audio = src_audio.audio
-    final_video = src_video.set_audio(audio)
-    final_video.write_videofile(dst)
+    subprocess.check_call([
+        imageio_ffmpeg._utils.get_ffmpeg_exe(),
+        '-y', # overwrite output
+        '-i', src_video, # video as input 0
+        '-i', src_audio, # video with audio as input 1
+        '-map', '0:v', # use video from input 0
+        '-map', '1:a', # use audio from input 1
+        '-codec', 'copy', # don't re-encode video
+        '-acodec', 'copy', # don't re-encode audio
+        dst
+    ])
 
 
 if __name__ == '__main__':
     original_filename = 'video3.mp4'
     no_sound_filename = 'no_sound.mp4'
+    mask_filename = 'mask.mp4'
     output_filename = 'output3.mp4'
 
     print(
         '\u001b[33mProcessing frames and putting frames back together...\u001b[0m')
-    process_frames(original_filename, no_sound_filename)
+    process_frames(original_filename, no_sound_filename, mask_filename)
 
     print('\u001b[33mInserting audio...\u001b[0m')
     insert_audio(original_filename, no_sound_filename, output_filename)
