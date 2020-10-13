@@ -10,6 +10,7 @@ import queue
 import shutil
 import sys
 import threading
+import traceback
 import time
 import urllib3
 
@@ -136,6 +137,9 @@ def video_loop():
         i = video_queue.get()
         try:
             video_task(i)
+        except:
+            # just print the error without terminating the thread
+            traceback.print_exc()
         finally:
             video_queue.task_done()
 
