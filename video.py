@@ -115,17 +115,27 @@ def start_encode_video(src, dst):
 
 
 def insert_audio(src_audio, src_video, dst):
-    subprocess.check_call([
-        imageio_ffmpeg._utils.get_ffmpeg_exe(),
-        '-y', # overwrite output
-        '-i', src_video, # video as input 0
-        '-i', src_audio, # video with audio as input 1
-        '-map', '0:v', # use video from input 0
-        '-map', '1:a', # use audio from input 1
-        '-codec', 'copy', # don't re-encode video
-        '-acodec', 'copy', # don't re-encode audio
-        dst
-    ])
+    try:
+        subprocess.check_call([
+            imageio_ffmpeg._utils.get_ffmpeg_exe(),
+            '-y', # overwrite output
+            '-i', src_video, # video as input 0
+            '-i', src_audio, # video with audio as input 1
+            '-map', '0:v', # use video from input 0
+            '-map', '1:a', # use audio from input 1
+            '-codec', 'copy', # don't re-encode video
+            '-acodec', 'copy', # don't re-encode audio
+            dst
+        ])
+    except subprocess.CalledProcessError:
+        # just make a video only file
+        subprocess.check_call([
+            imageio_ffmpeg._utils.get_ffmpeg_exe(),
+            '-y', # overwrite output
+            '-i', src_video, # video as input 0
+            '-codec', 'copy', # don't re-encode video
+            dst
+        ])
 
 
 if __name__ == '__main__':
