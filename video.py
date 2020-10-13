@@ -107,6 +107,7 @@ def start_encode_video(src, dst):
         '-y', # overwrite output
         '-i', src, # input
         '-codec', 'h264', # encode using x264
+        '-pix_fmt', 'yuv420p', # 4:2:0 colour format for compatibility with unity
         '-crf', '20', # aims for consistent video quality of 20, using as much bitrate as needed
         dst
     ])
