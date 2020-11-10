@@ -128,7 +128,7 @@ def video_task(data):
 
     with open(thumbnail_filename, 'rb') as f:
         logging.info('video_task put thumbnail')
-        r = http.request('PUT', dst_thumbnail_signed_url, headers={'Content-Type': 'video/mp4'}, body=f)
+        r = http.request('PUT', dst_thumbnail_signed_url, headers={'Content-Type': 'image/jpeg'}, body=f)
         logging.info('video_task put thumbnail status {}'.format(r.status))
         assert r.status == 200
 
