@@ -94,7 +94,7 @@ def video_task(data):
     no_sound_filename = 'no_sound.mp4'
     mask_filename = 'mask.mp4'
     output_filename = 'output3.mp4'
-    thumbnail_filename = 'chromakey_thumbnail.jpg'
+    thumbnail_filename = 'chromakey_thumbnail.png'
 
     src_signed_url = data['srcSignedUrl'][0]
     logging.info('video_task src_signed_url {}'.format(src_signed_url))
@@ -128,7 +128,7 @@ def video_task(data):
 
     with open(thumbnail_filename, 'rb') as f:
         logging.info('video_task put thumbnail')
-        r = http.request('PUT', dst_thumbnail_signed_url, headers={'Content-Type': 'image/jpeg'}, body=f)
+        r = http.request('PUT', dst_thumbnail_signed_url, headers={'Content-Type': 'image/png'}, body=f)
         logging.info('video_task put thumbnail status {}'.format(r.status))
         assert r.status == 200
 
