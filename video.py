@@ -38,7 +38,7 @@ def create_keying_background(width, height, rgb_color=(0, 0, 0)):
 # processes frames an saves them into a mp4 video
 
 
-def process_frames(original_filename, output_filename, mask_filename):
+def process_frames(original_filename, output_filename, mask_filename, thumbnail_filename):
     # change to gpu(0) for faster processing
     vr = VideoReader(original_filename, ctx=cpu(0))
 
@@ -96,8 +96,10 @@ def process_frames(original_filename, output_filename, mask_filename):
     video_mask.release()
 
     # encode videos to h264
+    thumbnail_proc = start_thumbnail(output_filename + '.lossless.mkv', thumbnail_filename)
     video_enc_proc = start_encode_video(output_filename + '.lossless.mkv', output_filename)
     video_mask_enc_proc = start_encode_video(mask_filename + '.lossless.mkv', mask_filename)
+    assert thumbnail_proc.wait() == 0, 'Thumbnail encoding failed'
     assert video_enc_proc.wait() == 0, 'Video encoding failed'
     assert video_mask_enc_proc.wait() == 0, 'Mask video encoding failed'
 
@@ -112,9 +114,16 @@ def start_encode_video(src, dst):
         dst
     ])
 
+def start_thumbnail(src, dst):
+    return subprocess.Popen([
+        imageio_ffmpeg._utils.get_ffmpeg_exe(),
+        '-y', # overwrite output
+        '-i', src, # input
+        '-vframes', '1', # only process 1 frame
+        dst
+    ])
+
 # creates a video with src_video as a video source and src_audio as an audio source
-
-
 def insert_audio(src_audio, src_video, dst):
     try:
         subprocess.check_call([
