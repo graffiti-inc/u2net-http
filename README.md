@@ -30,6 +30,8 @@ docker build -t graffiti-u2net-http .
 docker run -p 8080:80 -e PYTHONUNBUFFERED=x graffiti-u2net-http
 ```
 
+Pay attention to the version of `libnvidia-compute` in the Dockerfile. It should match what is on every host you are deploying to. Check the version by running `dpkg -l | grep libnvidia-compute`.
+
 ### Option 2 - Locally with virtualenv
 
 ```bash
